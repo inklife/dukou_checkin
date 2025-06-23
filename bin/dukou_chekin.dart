@@ -226,7 +226,7 @@ String _formatCheckinMessage(String rawMessage) {
     message.writeln('');
     
     // 修正签到成功的判断逻辑：ret为1且包含流量信息表示成功
-    bool isSuccess = ret == 1 && result.contains('流量');
+    bool isSuccess = ret == 1 && result.contains('获得');
     
     if (isSuccess) {
       message.writeln('✅ 签到状态: 成功');
