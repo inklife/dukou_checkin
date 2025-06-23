@@ -8,3 +8,8 @@ build/
 
 # Directory created by dartdoc
 doc/api/
+
+# Directories created by VS Code
+.vscode/
+
+set_env.sh
