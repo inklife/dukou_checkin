@@ -20,7 +20,7 @@ void main(List<String> arguments) async {
 
 Future<String> login(String email, String passwd) async {
   var response = await Dio().post(
-    'https://dukouapi.com/api/token',
+    'https://flzt.top/api/token',
     data: {
       'email': email,
       'passwd': passwd,
@@ -35,7 +35,7 @@ Future<String> checkin(String token) async {
     headers: {
       'access-token': token,
     },
-  )).get('https://dukouapi.com/api/user/checkin');
+  )).get('https://flzt.top/api/user/checkin');
   return response.data.toString();
 }
 
