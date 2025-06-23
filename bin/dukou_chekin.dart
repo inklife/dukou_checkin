@@ -12,6 +12,14 @@ void main(List<String> arguments) async {
   var passwd = Platform.environment['PASSWD_KEY'];
   var serverKey = Platform.environment['SERVER_KEY'];
 
+  // 打印调试信息
+  print('=== 调试信息 ===');
+  print('邮箱: ${email != null ? _maskEmail(email) : '未设置'}');
+  print('密码: ${passwd != null ? _maskPassword(passwd) : '未设置'}');
+  print('Server Key: ${serverKey != null ? '已设置' : '未设置'}');
+  print('基础URL: $baseUrl');
+  print('================');
+
   if (email != null && passwd != null) {
     try {
       print('开始执行签到程序...');
@@ -23,16 +31,27 @@ void main(List<String> arguments) async {
         await sendCheckinMessage(serverKey, message);
       }
     } catch (e) {
+      print('=== 错误详情 ===');
       print('程序执行出错: $e');
+      print('使用的邮箱: ${_maskEmail(email)}');
+      print('错误发生时间: ${DateTime.now()}');
+      print('===============');
       exit(1);
     }
   } else {
+    print('❌ 环境变量检查失败:');
+    print('EMAIL_KEY: ${email != null ? '✅ 已设置' : '❌ 未设置'}');
+    print('PASSWD_KEY: ${passwd != null ? '✅ 已设置' : '❌ 未设置'}');
     print('请设置EMAIL_KEY和PASSWD_KEY环境变量');
     exit(1);
   }
 }
 
 Future<String> login(String email, String passwd) async {
+  print('🔐 尝试登录...');
+  print('请求URL: $baseUrl/api/token');
+  print('邮箱: ${_maskEmail(email)}');
+  
   var response = await Dio().post(
     '$baseUrl/api/token',
     data: {
@@ -40,6 +59,9 @@ Future<String> login(String email, String passwd) async {
       'passwd': passwd,
     },
   );
+  
+  print('登录响应状态码: ${response.statusCode}');
+  print('登录响应数据: ${response.data}');
   
   // 处理响应数据
   dynamic responseData = response.data;
@@ -50,23 +72,37 @@ Future<String> login(String email, String passwd) async {
   } else if (responseData is Map<String, dynamic>) {
     map = responseData;
   } else {
-    throw Exception('响应数据格式错误');
+    throw Exception('响应数据格式错误: ${responseData.runtimeType}');
   }
   
   // 检查token是否存在
   if (map['token'] == null) {
+    print('❌ 登录失败详情:');
+    print('邮箱: ${_maskEmail(email)}');
+    print('返回码: ${map['ret']}');
+    print('错误信息: ${map['msg']}');
+    print('完整响应: $map');
     throw Exception('登录失败，未获取到token。响应: $map');
   }
   
+  print('✅ 登录成功，获取到token');
   return map['token'].toString();
 }
 
 Future<String> checkin(String token) async {
+  print('📝 开始签到...');
+  print('请求URL: $baseUrl/api/user/checkin');
+  print('Token: ${token.substring(0, 10)}...(已截取)');
+  
   var response = await Dio(BaseOptions(
     headers: {
       'access-token': token,
     },
   )).get('$baseUrl/api/user/checkin');
+  
+  print('签到响应状态码: ${response.statusCode}');
+  print('签到响应数据: ${response.data}');
+  
   return response.data.toString();
 }
 
@@ -98,12 +134,21 @@ Future<T> retryOnError<T>(Future<T> Function() operation, String operationName) 
       return await operation();
     } catch (e) {
       if (attempt < maxRetries && _isRetryableError(e)) {
-        print('$operationName 失败 (第 $attempt 次尝试): $e');
+        print('⚠️ $operationName 失败 (第 $attempt 次尝试): $e');
         print('等待 $retryDelaySeconds 秒后重试...');
         await Future.delayed(Duration(seconds: retryDelaySeconds));
         continue;
       } else {
         // 最后一次尝试失败或不可重试的错误
+        print('❌ $operationName 最终失败 (第 $attempt 次尝试): $e');
+        print('错误类型: ${e.runtimeType}');
+        if (e is DioError) {
+          print('DioError详情:');
+          print('  类型: ${e.type}');
+          print('  状态码: ${e.response?.statusCode}');
+          print('  响应数据: ${e.response?.data}');
+          print('  错误消息: ${e.message}');
+        }
         rethrow;
       }
     }
@@ -199,4 +244,27 @@ String _formatCheckinMessage(String rawMessage) {
 
 🤖 Dukou自动签到程序''';
   }
+}
+
+// 掩码邮箱地址，保留前2位和@后的域名
+String _maskEmail(String email) {
+  if (email.isEmpty) return '***';
+  
+  int atIndex = email.indexOf('@');
+  if (atIndex == -1) return '***';
+  
+  String localPart = email.substring(0, atIndex);
+  String domain = email.substring(atIndex);
+  
+  if (localPart.length <= 2) {
+    return '***$domain';
+  } else {
+    return '${localPart.substring(0, 2)}***$domain';
+  }
+}
+
+// 掩码密码，只显示长度
+String _maskPassword(String password) {
+  if (password.isEmpty) return '未设置';
+  return '****(长度: ${password.length})';
 }
