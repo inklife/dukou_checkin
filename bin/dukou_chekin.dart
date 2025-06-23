@@ -85,7 +85,12 @@ Future<String> login(String email, String passwd) async {
     throw Exception('登录失败，未获取到token。响应: $map');
   }
   
+  // 显示格式化的用户信息
+  String username = map['username']?.toString() ?? '未知用户';
   print('✅ 登录成功，获取到token');
+  print('👤 用户名: $username');
+  print('🆔 用户ID: ${map['id']}');
+  
   return map['token'].toString();
 }
 
@@ -177,13 +182,17 @@ void _printFormattedCheckinResult(String rawMessage) {
     String result = response['result'] ?? '未知结果';
     int ret = response['ret'] ?? -1;
     
-    // 格式化时间
-    DateTime now = DateTime.now();
+    // 格式化时间（北京时间）
+    DateTime now = DateTime.now().toUtc().add(Duration(hours: 8));
     String timestamp = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')}';
     
     print('签到完成 [$timestamp]');
     print('┌─────────────────────────────');
-    if (ret == 0) {
+    
+    // 修正签到成功的判断逻辑：ret为1且包含流量信息表示成功
+    bool isSuccess = ret == 1 && result.contains('获得');
+    
+    if (isSuccess) {
       print('│ ✅ 签到状态: 成功');
       print('│ 📝 签到结果: $result');
     } else {
@@ -207,16 +216,19 @@ String _formatCheckinMessage(String rawMessage) {
     String result = response['result'] ?? '未知结果';
     int ret = response['ret'] ?? -1;
     
-    // 格式化时间
-    DateTime now = DateTime.now();
+    // 格式化时间（北京时间）
+    DateTime now = DateTime.now().toUtc().add(Duration(hours: 8));
     String timestamp = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')} ${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')}';
     
     // 构建友好的消息格式
     StringBuffer message = StringBuffer();
-    message.writeln('📅 签到时间: $timestamp');
+    message.writeln('📅 签到时间: $timestamp (北京时间)');
     message.writeln('');
     
-    if (ret == 0) {
+    // 修正签到成功的判断逻辑：ret为1且包含流量信息表示成功
+    bool isSuccess = ret == 1 && result.contains('流量');
+    
+    if (isSuccess) {
       message.writeln('✅ 签到状态: 成功');
       message.writeln('');
       message.writeln('📝 签到结果: $result');
@@ -234,10 +246,10 @@ String _formatCheckinMessage(String rawMessage) {
     return message.toString();
   } catch (e) {
     // 如果解析失败，返回原始消息
-    DateTime now = DateTime.now();
+    DateTime now = DateTime.now().toUtc().add(Duration(hours: 8));
     String timestamp = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')} ${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')}';
     
-    return '''📅 签到时间: $timestamp
+    return '''📅 签到时间: $timestamp (北京时间)
 
 ⚠️ 签到结果解析失败
 📝 原始响应: $rawMessage
